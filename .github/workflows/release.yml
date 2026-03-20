@@ -1,5 +1,7 @@
 name: CI Build
+
 on: [workflow_dispatch]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,27 +11,47 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Get version
+
+      - name: Get version from update.json
         id: version
         uses: notiz-dev/github-action-json-property@master
         with: 
-            path: 'update.json'
-            prop_path: 'version'
+          path: 'update.json'
+          prop_path: 'version'
+
+      - name: Download and prepare ddns-go binary
+        run: |
+          echo "Downloading ddns-go v6.16.2 arm64..."
+          curl -L -o ddns.tar.gz https://github.com/jeessy2/ddns-go/releases/download/v6.16.2/ddns-go_6.16.2_android_arm64.tar.gz
+          tar -xzf ddns.tar.gz
+          mkdir -p system/bin
+          mv ddns-go system/bin/ddns-go 2>/dev/null || mv */ddns-go system/bin/ddns-go 2>/dev/null || echo "Warning: Binary move issue, check tar contents"
+          chmod 755 system/bin/ddns-go
+          ls -l system/bin/
+          du -sh system/bin/ddns-go
+          rm -f ddns.tar.gz *.tar.gz
+
       - name: Archive
-        run:  |
-          sudo zip -r KSU-Template.zip *  
+        run: |
+          echo "Creating ZIP..."
+          zip -r ddns-go-6.16.2-ksu.zip * \
+            -x "*.git*" "*.github/*" "README.md" "CHANGELOG.md" "LICENSE" "*.yml" \
+            || echo "Zip failed, check files"
+          ls -l ddns-go-6.16.2-ksu.zip
+
       - name: Release
         uses: meeDamian/github-release@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{steps.version.outputs.prop}}
-          name: ${{steps.version.outputs.prop}}
-          body: Please check [changelog](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for changes
-          files: KSU-Template.zip
+          tag: ${{ steps.version.outputs.prop || '6.16.2' }}
+          name: ${{ steps.version.outputs.prop || '6.16.2' }}
+          body: Latest ddns-go v6.16.2 KSU Module. Check README for details.
+          files: ddns-go-6.16.2-ksu.zip
           gzip: false
           draft: false
           prerelease: false
           allow_override: true
+
       - name: Cleanup
-        run:  |
-          rm KSU-Template.zip
+        run: |
+          rm -f ddns-go-6.16.2-ksu.zip ddns.tar.gz *.tar.gz
