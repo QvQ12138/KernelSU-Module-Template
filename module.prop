@@ -1,6 +1,7 @@
-id=ddns-go-latest
-name=DDNS-Go v6.16.2 KSU Module
-version=v6.16.2
+id=ddns-go-ksu
+name=DDNS-Go v6.16.2 for KernelSU
+version=6.16.2
 versionCode=6162
-author=YourName (based on jeessy2/ddns-go)
-description=Latest ddns-go as system service for DDNS updating
+author=Based on jeessy2/ddns-go & xfl12345/magisk version
+description=Latest ddns-go binary as system service. Web UI: http://127.0.0.1:9876 after install & reboot. Logs: /data/local/tmp/ddns-go.log
+minMagisk=0  # KSU 兼容 Magisk prop
