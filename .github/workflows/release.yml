@@ -5,6 +5,8 @@ on: [workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # 修复 Node 20 警告，强制用 Node 24
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -12,40 +14,32 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Get version from update.json
-        id: version
-        uses: notiz-dev/github-action-json-property@master
-        with: 
-          path: 'update.json'
-          prop_path: 'version'
-
       - name: Download and prepare ddns-go binary
         run: |
           echo "Downloading ddns-go v6.16.2 arm64..."
           curl -L -o ddns.tar.gz https://github.com/jeessy2/ddns-go/releases/download/v6.16.2/ddns-go_6.16.2_android_arm64.tar.gz
           tar -xzf ddns.tar.gz
           mkdir -p system/bin
-          mv ddns-go system/bin/ddns-go 2>/dev/null || mv */ddns-go system/bin/ddns-go 2>/dev/null || echo "Warning: Binary move issue, check tar contents"
+          mv ddns-go system/bin/ddns-go 2>/dev/null || mv */ddns-go system/bin/ddns-go 2>/dev/null
           chmod 755 system/bin/ddns-go
           ls -l system/bin/
-          du -sh system/bin/ddns-go
+          du -sh system/bin/ddns-go || echo "Binary size check failed"
           rm -f ddns.tar.gz *.tar.gz
 
       - name: Archive
         run: |
-          echo "Creating ZIP..."
           zip -r ddns-go-6.16.2-ksu.zip * \
-            -x "*.git*" "*.github/*" "README.md" "CHANGELOG.md" "LICENSE" "*.yml" \
-            || echo "Zip failed, check files"
+            -x "*.git*" ".github/*" "README.md" "CHANGELOG.md" "LICENSE" "*.yml" \
+            || echo "Zip command failed"
           ls -l ddns-go-6.16.2-ksu.zip
 
       - name: Release
         uses: meeDamian/github-release@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.version.outputs.prop || '6.16.2' }}
-          name: ${{ steps.version.outputs.prop || '6.16.2' }}
-          body: Latest ddns-go v6.16.2 KSU Module. Check README for details.
+          tag: 6.16.2
+          name: 6.16.2
+          body: DDNS-Go v6.16.2 arm64 for KernelSU. Flash via KSU Manager. Web UI: http://127.0.0.1:9876 (if -noweb removed in service.sh).
           files: ddns-go-6.16.2-ksu.zip
           gzip: false
           draft: false
@@ -53,5 +47,4 @@ jobs:
           allow_override: true
 
       - name: Cleanup
-        run: |
-          rm -f ddns-go-6.16.2-ksu.zip ddns.tar.gz *.tar.gz
+        run: rm -f ddns-go-6.16.2-ksu.zip ddns.tar.gz *.tar.gz
